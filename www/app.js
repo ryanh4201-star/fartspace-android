@@ -189,32 +189,57 @@
     deep: 'sounds/fart-deep.mp3',
     blast: 'sounds/fart-blast.mp3'
   };
-  var audioCache = {};
-  function getAudio(kind) {
+  // ---- Sounds: Web Audio, decoded once, restarted per tap ----
+  // Why this instead of plain <audio>: reusing one Audio element and
+  // setting currentTime = 0 before its metadata has loaded THROWS and
+  // kills the tap silently, and rapid pause()/play() cycles abort the
+  // play promise — both made some pushes silent on the app. With Web
+  // Audio the file is decoded once into a buffer, and every tap starts
+  // a fresh source from that buffer and stops the previous one: spam =
+  // interrupted little farts, slow tap = the whole fart.
+  var actx = null;
+  var bufferCache = {};
+  var currentSource = null;
+  function ensureCtx() {
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) { actx = null; }
+    return actx;
+  }
+  function loadBuffer(kind) {
     var src = SOUND_FILES[kind] || SOUND_FILES.classic;
-    if (!audioCache[kind]) {
-      audioCache[kind] = new Audio(src);
-      audioCache[kind].preload = 'auto';
+    if (!bufferCache[kind]) {
+      bufferCache[kind] = fetch(src).then(function (r) { return r.arrayBuffer(); })
+        .then(function (buf) { return ensureCtx().decodeAudioData(buf); })
+        .catch(function (e) { console.error('Sound decode failed:', e); return null; });
     }
-    return audioCache[kind];
+    return bufferCache[kind];
   }
   // Preload the rip sound at startup so the first tap is instant.
-  getAudio('classic');
+  loadBuffer('classic');
+  var dummyAudio = { addEventListener: function () {} };
   function playFart(kind) {
+    var ctx = ensureCtx();
+    if (!ctx) return dummyAudio;
     try {
-      // Reuse one Audio object per sound and restart it from the top.
-      // A fresh Audio() every tap has to re-fetch/decode the file, so
-      // rapid taps raced and some pushes came out silent. Restarting a
-      // preloaded clip is instant: spam = interrupted little farts,
-      // slow tap = the whole fart. Exactly the fidget-button feel.
-      var audio = getAudio(kind);
-      // Stop any other sound already playing, then restart this one.
-      Object.keys(audioCache).forEach(function (k) { if (audioCache[k] !== audio) audioCache[k].pause(); });
-      audio.pause();
-      audio.currentTime = 0;
-      audio.play().catch(function (e) { console.error('Sound failed (browser may need a tap first):', e); });
-      return audio;
-    } catch (e) { console.error('Sound failed (browser may need a tap first):', e); return null; }
+      if (currentSource) { try { currentSource.stop(); } catch (e) {} currentSource = null; }
+    } catch (e) {}
+    var src = null;
+    loadBuffer(kind).then(function (buffer) {
+      if (!buffer) return;
+      try {
+        if (currentSource) { try { currentSource.stop(); } catch (e) {} }
+        src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ctx.destination);
+        src.start(0);
+        currentSource = src;
+      } catch (e) { console.error('Sound failed:', e); }
+    });
+    // Return a source-like object so the sound-board 'ended' wiring
+    // keeps working; the real source is swapped in once decoded.
+    return dummyAudio;
   }
   document.querySelectorAll('#sound-grid button').forEach(function (btn) {
     btn.addEventListener('click', function () {
