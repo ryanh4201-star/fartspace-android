@@ -216,25 +216,48 @@
     }
     return bufferCache[kind];
   }
-  // Preload the rip sound at startup so the first tap is instant.
-  loadBuffer('classic');
+  // Preload AND decode ALL sounds at startup, not just classic.
+  // Only classic was preloaded before, so the other five had to be
+  // fetched and decoded on their first tap — on a phone that delay
+  // meant the tap produced nothing, and the next tap cancelled it.
+  Object.keys(SOUND_FILES).forEach(function (k) { loadBuffer(k); });
   var dummyAudio = { addEventListener: function () {} };
+  var currentGain = null;
+  function stopCurrent() {
+    if (!currentSource) return;
+    // Quick fade-out so cutting a sound off mid-play never pops.
+    try {
+      if (currentGain && actx) {
+        currentGain.gain.setTargetAtTime(0, actx.currentTime, 0.005);
+        currentSource.stop(actx.currentTime + 0.05);
+      } else {
+        currentSource.stop();
+      }
+    } catch (e) {}
+    currentSource = null;
+    currentGain = null;
+  }
   function playFart(kind) {
     var ctx = ensureCtx();
     if (!ctx) return dummyAudio;
-    try {
-      if (currentSource) { try { currentSource.stop(); } catch (e) {} currentSource = null; }
-    } catch (e) {}
-    var src = null;
+    stopCurrent();
     loadBuffer(kind).then(function (buffer) {
       if (!buffer) return;
       try {
-        if (currentSource) { try { currentSource.stop(); } catch (e) {} }
-        src = ctx.createBufferSource();
+        stopCurrent();
+        // Fade in over ~15ms: starting a decoded clip abruptly at a
+        // non-zero sample clicks/pops, and rapid restarts made the
+        // rip button sound horrible.
+        var gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.setTargetAtTime(1, ctx.currentTime, 0.005);
+        gain.connect(ctx.destination);
+        var src = ctx.createBufferSource();
         src.buffer = buffer;
-        src.connect(ctx.destination);
+        src.connect(gain);
         src.start(0);
         currentSource = src;
+        currentGain = gain;
       } catch (e) { console.error('Sound failed:', e); }
     });
     // Return a source-like object so the sound-board 'ended' wiring
