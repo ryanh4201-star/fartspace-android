@@ -1,0 +1,26 @@
+# FartSpace Android — do not commit these to GitHub.
+# (android/.gitignore already covers most Android build output;
+# this file covers the project root.)
+
+# Node dependencies — rebuilt on every machine with `npm ci`
+node_modules/
+
+# Android build output and local SDK settings
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+
+# Built app files — download these from GitHub Actions instead
+*.apk
+*.aab
+
+# Signing keystores — NEVER commit these. If one is lost, the app
+# cannot be updated on Google Play. Back it up somewhere safe instead.
+*.jks
+*.keystore
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
