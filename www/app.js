@@ -189,80 +189,65 @@
     deep: 'sounds/fart-deep.mp3',
     blast: 'sounds/fart-blast.mp3'
   };
-  // ---- Sounds: Web Audio, decoded once, restarted per tap ----
-  // Why this instead of plain <audio>: reusing one Audio element and
-  // setting currentTime = 0 before its metadata has loaded THROWS and
-  // kills the tap silently, and rapid pause()/play() cycles abort the
-  // play promise — both made some pushes silent on the app. With Web
-  // Audio the file is decoded once into a buffer, and every tap starts
-  // a fresh source from that buffer and stops the previous one: spam =
-  // interrupted little farts, slow tap = the whole fart.
-  var actx = null;
-  var bufferCache = {};
-  var currentSource = null;
-  function ensureCtx() {
-    try {
-      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === 'suspended') actx.resume();
-    } catch (e) { actx = null; }
-    return actx;
+  // ---- Sounds: HTML Audio pool, preloaded, one element per tap ----
+  // Web Audio (v7–v10) kept failing on the phone: every tap came out
+  // ~1s late and a new tap could not interrupt the playing sound, so
+  // spam produced one sound only after stopping. Plain <audio> worked
+  // for the sound board back in v2 — the only thing that broke it was
+  // creating a brand-new Audio() on every tap, which had to re-fetch
+  // and decode each time. So now: a small pool of preloaded Audio
+  // elements per sound, built once at startup. Every tap pauses the
+  // currently playing element for that sound and plays a fresh, ready
+  // element from the start: spam = interrupted little farts, slow tap
+  // = the whole fart. No AudioContext, no decode step, no async start.
+  var POOL_SIZE = 4;
+  var audioPool = {};
+  var poolIndex = {};
+  var kindsReady = {};
+  var lastTapResult = 'not tapped yet';
+  function setStatus() {
+    var ready = Object.keys(kindsReady).length;
+    var el = document.getElementById('sound-status');
+    if (el) el.textContent = 'Sounds ready: ' + ready + '/6 — Last tap: ' + lastTapResult;
   }
-  function loadBuffer(kind) {
-    var src = SOUND_FILES[kind] || SOUND_FILES.classic;
-    if (!bufferCache[kind]) {
-      bufferCache[kind] = fetch(src).then(function (r) { return r.arrayBuffer(); })
-        .then(function (buf) { return ensureCtx().decodeAudioData(buf); })
-        .catch(function (e) { console.error('Sound decode failed:', e); return null; });
+  Object.keys(SOUND_FILES).forEach(function (kind) {
+    audioPool[kind] = [];
+    poolIndex[kind] = 0;
+    for (var i = 0; i < POOL_SIZE; i++) {
+      var a = new Audio(SOUND_FILES[kind]);
+      a.preload = 'auto';
+      a.load();
+      a.addEventListener('canplaythrough', function () {
+        kindsReady[kind] = true;
+        setStatus();
+      });
+      audioPool[kind].push(a);
     }
-    return bufferCache[kind];
-  }
-  // Preload AND decode ALL sounds at startup, not just classic.
-  // Only classic was preloaded before, so the other five had to be
-  // fetched and decoded on their first tap — on a phone that delay
-  // meant the tap produced nothing, and the next tap cancelled it.
-  Object.keys(SOUND_FILES).forEach(function (k) { loadBuffer(k); });
-  var dummyAudio = { addEventListener: function () {} };
-  var currentGain = null;
-  function stopCurrent() {
-    if (!currentSource) return;
-    // Quick fade-out so cutting a sound off mid-play never pops.
-    try {
-      if (currentGain && actx) {
-        currentGain.gain.setTargetAtTime(0, actx.currentTime, 0.005);
-        currentSource.stop(actx.currentTime + 0.05);
-      } else {
-        currentSource.stop();
-      }
-    } catch (e) {}
-    currentSource = null;
-    currentGain = null;
-  }
+  });
   function playFart(kind) {
-    var ctx = ensureCtx();
-    if (!ctx) return dummyAudio;
-    stopCurrent();
-    loadBuffer(kind).then(function (buffer) {
-      if (!buffer) return;
-      try {
-        stopCurrent();
-        // Fade in over ~15ms: starting a decoded clip abruptly at a
-        // non-zero sample clicks/pops, and rapid restarts made the
-        // rip button sound horrible.
-        var gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.setTargetAtTime(1, ctx.currentTime, 0.005);
-        gain.connect(ctx.destination);
-        var src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(gain);
-        src.start(0);
-        currentSource = src;
-        currentGain = gain;
-      } catch (e) { console.error('Sound failed:', e); }
-    });
-    // Return a source-like object so the sound-board 'ended' wiring
-    // keeps working; the real source is swapped in once decoded.
-    return dummyAudio;
+    var started = performance.now();
+    var pool = audioPool[kind] || audioPool.classic;
+    // Interrupt whatever of this sound is currently playing.
+    pool.forEach(function (a) { try { a.pause(); } catch (e) {} });
+    var el = pool[poolIndex[kind] % POOL_SIZE];
+    poolIndex[kind] = (poolIndex[kind] + 1) % POOL_SIZE;
+    try { el.currentTime = 0; } catch (e) {}
+    var p = el.play();
+    if (p && p.then) {
+      p.then(function () {
+        lastTapResult = 'played in ' + Math.round(performance.now() - started) + 'ms';
+        setStatus();
+      }).catch(function (e) {
+        lastTapResult = 'FAILED: ' + (e && e.name ? e.name : e);
+        setStatus();
+      });
+    } else {
+      lastTapResult = 'played (no promise)';
+      setStatus();
+    }
+    // Return the real audio element so the sound-board 'ended' wiring
+    // keeps working.
+    return el;
   }
   document.querySelectorAll('#sound-grid button').forEach(function (btn) {
     btn.addEventListener('click', function () {
