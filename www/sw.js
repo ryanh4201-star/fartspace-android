@@ -1,7 +1,7 @@
 /* FartSpace service worker — caches the app shell only.
    Supabase API calls and the Supabase JS CDN are NOT cached here:
    they always go to the network, so the feed stays live. */
-var CACHE = 'fartspace-v6';
+var CACHE = 'fartspace-v7';
 var SHELL = [
   '/',
  '/index.html', '/admin.html',
@@ -51,7 +51,10 @@ self.addEventListener('fetch', function (event) {
       }).catch(function () { return cached; });
       // Navigations: network first, fall back to cache offline.
       // Other shell files: serve cache immediately, refresh in background.
+      // app.js is ALWAYS network-first: it holds the sound code, and a
+      // stale cached copy is exactly how a sound fix "doesn't work".
       if (req.mode === 'navigate') return network.catch(function () { return cached; });
+      if (req.url.indexOf('/app.js') !== -1) return network.catch(function () { return cached; });
       return cached || network;
     })
   );
