@@ -31,7 +31,10 @@
   .meter > div { height:100%; width:0%; background:linear-gradient(90deg,var(--green),var(--gold),var(--red)); transition:width .3s; }
   .meter-label { color:var(--muted); font-size:.9rem; text-align:center; }
   .sound-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
-  .sound-grid button { padding:14px 10px; background:var(--card2); color:var(--cream); border:1px solid #5a4023; font-size:1rem; }
+  .sound-grid button { padding:0 0 12px; background:var(--card2); color:var(--cream); border:1px solid #5a4023; font-size:1rem; overflow:hidden; }
+  .sound-grid button img { display:block; width:100%; aspect-ratio:1/1; object-fit:cover; border-bottom:1px solid #5a4023; }
+  .sound-grid button span { display:block; padding:10px 6px 0; }
+  .hero-img { display:block; width:100%; max-width:980px; margin:16px auto 0; border-radius:16px; border:1px solid #4a331d; }
   .sound-grid button.playing { background:var(--gold); color:#3a2500; }
   .filters, .tabs { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
   .filters button, .tabs button { padding:8px 14px; background:#120b05; color:var(--cream); border:1px solid #5a4023; }
@@ -66,6 +69,8 @@
   <div><span class="badge" id="mode-badge">LIVE FEED</span></div>
 </header>
 
+<img class="hero-img" src="images/hero.jpg" alt="Cartoon man and woman proudly farting">
+
 <main>
   <section aria-label="Let one rip">
     <h2>Let One Rip</h2>
@@ -79,12 +84,12 @@
     <h2>🎛️ The Sound Board</h2>
     <p class="sub">Six real recorded farts. Turn your sound on.</p>
     <div class="sound-grid" id="sound-grid">
-      <button type="button" data-sound="classic">🎺 Classic</button>
-      <button type="button" data-sound="long">🌪️ Long Ripper</button>
-      <button type="button" data-sound="wet">💦 Wet One</button>
-      <button type="button" data-sound="squeaky">🐭 Squeaker</button>
-      <button type="button" data-sound="deep">🌋 Deep Rumble</button>
-      <button type="button" data-sound="blast">💥 Blast</button>
+      <button type="button" data-sound="classic"><img src="images/scene-classic.jpg" alt="Cartoon man farting in a crowded elevator"><span>🎺 Classic</span></button>
+      <button type="button" data-sound="long"><img src="images/scene-long.jpg" alt="Cartoon woman farting during a yoga class"><span>🌪️ Long Ripper</span></button>
+      <button type="button" data-sound="wet"><img src="images/scene-wet.jpg" alt="Cartoon man farting at a Thanksgiving dinner table"><span>💦 Wet One</span></button>
+      <button type="button" data-sound="squeaky"><img src="images/scene-squeaky.jpg" alt="Cartoon woman letting out a squeaky fart in a library"><span>🐭 Squeaker</span></button>
+      <button type="button" data-sound="deep"><img src="images/scene-deep.jpg" alt="Cartoon man farting while squatting at the gym"><span>🌋 Deep Rumble</span></button>
+      <button type="button" data-sound="blast"><img src="images/scene-blast.jpg" alt="Cartoon man farting while giving a wedding toast"><span>💥 Blast</span></button>
     </div>
   </section>
 

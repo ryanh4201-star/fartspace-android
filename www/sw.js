@@ -1,13 +1,17 @@
 /* FartSpace service worker — caches the app shell only.
    Supabase API calls and the Supabase JS CDN are NOT cached here:
    they always go to the network, so the feed stays live. */
-var CACHE = 'fartspace-v2';
+var CACHE = 'fartspace-v3';
 var SHELL = [
   '/',
  '/index.html', '/admin.html',
   '/config.js', '/app.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png', '/icons/icon-512.png',
+  '/images/hero.jpg',
+  '/images/scene-classic.jpg', '/images/scene-long.jpg',
+  '/images/scene-wet.jpg', '/images/scene-squeaky.jpg',
+  '/images/scene-deep.jpg', '/images/scene-blast.jpg',
   '/sounds/fart-classic.mp3', '/sounds/fart-long.mp3',
   '/sounds/fart-wet.mp3', '/sounds/fart-squeaky.mp3',
   '/sounds/fart-deep.mp3', '/sounds/fart-blast.mp3'
