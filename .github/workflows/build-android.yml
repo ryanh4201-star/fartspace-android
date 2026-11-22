@@ -1,0 +1,109 @@
+# FartSpace — Android build (free, GitHub Actions)
+#
+# What it does:
+#   - Builds a debug APK (for testing on your own phone) AND an
+#     unsigned release AAB (the file format Google Play wants).
+#   - Runs on every push to main, and whenever you press "Run workflow".
+#   - No accounts, keys, passwords or secrets are used here. The release
+#     AAB is UNSIGNED — Google Play will not accept it as-is. To publish,
+#     sign it first (see PLAY_STORE.md, "Your signing key").
+#
+# The Supabase anon publishable key in www/config.js is public client
+# config (the same key shipped in the website). No service_role / secret
+# key is anywhere in this repo — never add one.
+#
+# Why GitHub Actions? The Muse VM cannot build this locally (its network
+# policy blocks Java/Gradle downloads). GitHub's cloud runners have no
+# such restriction, and the build is free on the GitHub free plan.
+
+name: Build FartSpace Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build APK + AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 36
+          build-tools: 36.0.0
+
+      - name: Accept SDK licences and install API 36 platform + build-tools
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/build.gradle', 'android/app/build.gradle', 'android/variables.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # NOTE: do NOT run ./sync-web.sh here — it copies files from
+      # ~/workspace/fartspace-public, which only exists on the Muse VM.
+      # The web files are committed in www/ already, so `cap sync` is
+      # all the runner needs.
+      - name: Sync web files into the Android project
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Build unsigned release AAB
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Check the outputs exist
+        run: |
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fartspace-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: fartspace-release-unsigned.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
