@@ -177,41 +177,36 @@
     toast('💨 Ripped! The Fart-O-Meter has noted this.');
   });
 
-  // ---- Sound board: synthesized with Web Audio, no audio files ----
-  var audioCtx = null;
-  function ctx() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
-  function fartTone(freq, dur, type, when, slideTo) {
-    var ac = ctx(), osc = ac.createOscillator(), gain = ac.createGain();
-    osc.type = type || 'sawtooth';
-    osc.frequency.setValueAtTime(freq, ac.currentTime + when);
-    if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, ac.currentTime + when + dur);
-    gain.gain.setValueAtTime(0.0001, ac.currentTime + when);
-    gain.gain.exponentialRampToValueAtTime(0.25, ac.currentTime + when + 0.03);
-    // Wobble = the classic fart flutter.
-    var lfo = ac.createOscillator(), lfoGain = ac.createGain();
-    lfo.frequency.value = 28; lfoGain.gain.value = 0.12;
-    lfo.connect(lfoGain); lfoGain.connect(gain.gain);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + when + dur);
-    osc.connect(gain); gain.connect(ac.destination);
-    osc.start(ac.currentTime + when); lfo.start(ac.currentTime + when);
-    osc.stop(ac.currentTime + when + dur); lfo.stop(ac.currentTime + when + dur);
-  }
+  // ---- Sound board: real recorded sounds in sounds/ ----
+  // Each button plays a different real fart recording (Daily Sounds,
+  // free for personal and commercial use, no attribution required).
+  // No synthesized sounds: the old Web Audio fart synth is gone.
+  var SOUND_FILES = {
+    classic: 'sounds/fart-classic.mp3',
+    long: 'sounds/fart-long.mp3',
+    wet: 'sounds/fart-wet.mp3',
+    squeaky: 'sounds/fart-squeaky.mp3',
+    deep: 'sounds/fart-deep.mp3',
+    blast: 'sounds/fart-blast.mp3'
+  };
+  var currentAudio = null;
   function playFart(kind) {
     try {
-      if (kind === 'classic') fartTone(120, 0.5, 'sawtooth', 0, 60);
-      else if (kind === 'trombone') { fartTone(180, 0.35, 'sawtooth', 0, 90); fartTone(140, 0.4, 'sawtooth', 0.35, 70); fartTone(110, 0.5, 'sawtooth', 0.75, 55); }
-      else if (kind === 'squeaker') fartTone(420, 0.3, 'square', 0, 650);
-      else if (kind === 'rapid') { for (var i = 0; i < 5; i++) fartTone(150, 0.12, 'sawtooth', i * 0.14, 80); }
-      else if (kind === 'silent') { fartTone(60, 1.2, 'sine', 0, 45); toast('🤫 Silent But Deadly. You will smell it in 3… 2…'); }
-      else if (kind === 'elevator') { fartTone(100, 0.9, 'sawtooth', 0, 50); }
-    } catch (e) { console.error('Sound failed (browser may need a tap first):', e); }
+      var src = SOUND_FILES[kind] || SOUND_FILES.classic;
+      if (currentAudio) currentAudio.pause();
+      currentAudio = new Audio(src);
+      currentAudio.play().catch(function (e) { console.error('Sound failed (browser may need a tap first):', e); });
+      return currentAudio;
+    } catch (e) { console.error('Sound failed (browser may need a tap first):', e); return null; }
   }
   document.querySelectorAll('#sound-grid button').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('#sound-grid button').forEach(function (b) { b.classList.remove('playing'); });
       btn.classList.add('playing');
-      playFart(btn.getAttribute('data-sound'));
-      setTimeout(function () { btn.classList.remove('playing'); }, 1200);
+      var audio = playFart(btn.getAttribute('data-sound'));
+      var clear = function () { btn.classList.remove('playing'); };
+      if (audio) audio.addEventListener('ended', clear);
+      setTimeout(clear, 4500);
     });
   });
 
