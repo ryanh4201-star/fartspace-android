@@ -35,6 +35,13 @@
   .sound-grid button img { display:block; width:100%; aspect-ratio:1/1; object-fit:cover; border-bottom:1px solid #5a4023; }
   .sound-grid button span { display:block; padding:10px 6px 0; }
   .hero-img { display:block; width:100%; max-width:980px; margin:16px auto 0; border-radius:16px; border:1px solid #4a331d; }
+  .hero-wrap { position:relative; width:100%; max-width:980px; margin:0 auto; }
+  .hero-wrap .hero-img { margin:16px 0 0; }
+  .wisp { position:absolute; left:47%; top:74%; width:22px; height:22px; border-radius:50% 50% 50% 20%; background:radial-gradient(circle at 35% 35%, rgba(126,200,80,.95), rgba(126,200,80,.55) 55%, rgba(126,200,80,0) 75%); opacity:0; pointer-events:none; animation:rise 6s ease-in-out infinite; }
+  .wisp.w2 { left:50%; width:15px; height:15px; animation-delay:2s; }
+  .wisp.w3 { left:44%; width:12px; height:12px; animation-delay:4s; }
+  @keyframes rise { 0% { transform:translate(0,0) scale(.6); opacity:0; } 15% { opacity:.9; } 60% { opacity:.55; } 100% { transform:translate(14px,-110px) scale(1.5); opacity:0; } }
+  @media (prefers-reduced-motion: reduce) { .wisp { animation:none; display:none; } }
   .sound-grid button.playing { background:var(--gold); color:#3a2500; }
   .filters, .tabs { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
   .filters button, .tabs button { padding:8px 14px; background:#120b05; color:var(--cream); border:1px solid #5a4023; }
@@ -69,7 +76,12 @@
   <div><span class="badge" id="mode-badge">LIVE FEED</span></div>
 </header>
 
-<img class="hero-img" src="images/hero.jpg" alt="Cartoon man and woman proudly farting">
+<div class="hero-wrap">
+  <img class="hero-img" src="images/hero.jpg" alt="Cartoon man and woman proudly farting">
+  <span class="wisp" aria-hidden="true"></span>
+  <span class="wisp w2" aria-hidden="true"></span>
+  <span class="wisp w3" aria-hidden="true"></span>
+</div>
 
 <main>
   <section aria-label="Let one rip">
