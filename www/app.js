@@ -189,14 +189,31 @@
     deep: 'sounds/fart-deep.mp3',
     blast: 'sounds/fart-blast.mp3'
   };
-  var currentAudio = null;
+  var audioCache = {};
+  function getAudio(kind) {
+    var src = SOUND_FILES[kind] || SOUND_FILES.classic;
+    if (!audioCache[kind]) {
+      audioCache[kind] = new Audio(src);
+      audioCache[kind].preload = 'auto';
+    }
+    return audioCache[kind];
+  }
+  // Preload the rip sound at startup so the first tap is instant.
+  getAudio('classic');
   function playFart(kind) {
     try {
-      var src = SOUND_FILES[kind] || SOUND_FILES.classic;
-      if (currentAudio) currentAudio.pause();
-      currentAudio = new Audio(src);
-      currentAudio.play().catch(function (e) { console.error('Sound failed (browser may need a tap first):', e); });
-      return currentAudio;
+      // Reuse one Audio object per sound and restart it from the top.
+      // A fresh Audio() every tap has to re-fetch/decode the file, so
+      // rapid taps raced and some pushes came out silent. Restarting a
+      // preloaded clip is instant: spam = interrupted little farts,
+      // slow tap = the whole fart. Exactly the fidget-button feel.
+      var audio = getAudio(kind);
+      // Stop any other sound already playing, then restart this one.
+      Object.keys(audioCache).forEach(function (k) { if (audioCache[k] !== audio) audioCache[k].pause(); });
+      audio.pause();
+      audio.currentTime = 0;
+      audio.play().catch(function (e) { console.error('Sound failed (browser may need a tap first):', e); });
+      return audio;
     } catch (e) { console.error('Sound failed (browser may need a tap first):', e); return null; }
   }
   document.querySelectorAll('#sound-grid button').forEach(function (btn) {
