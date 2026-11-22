@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a120b">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>FartSpace — Show Off Your Proudest (and Most Embarrassing) Farts</title>
+<meta name="description" content="FartSpace is the social network for farts. Share your proudest rips and your most embarrassing ones. Respect included. No judgement. Well, a little judgement.">
+<style>
+  :root { --bg:#1a120b; --card:#2b1d12; --card2:#3a2817; --cream:#f7e8c9; --gold:#f5b301; --green:#7ec850; --red:#e05252; --muted:#c9a876; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--cream); line-height:1.5; }
+  a { color:var(--gold); }
+  header { text-align:center; padding:32px 16px 8px; }
+  header h1 { font-size:clamp(2.4rem,7vw,4rem); margin:0; letter-spacing:1px; }
+  header h1 span { color:var(--gold); }
+  header p { color:var(--muted); max-width:640px; margin:8px auto 0; }
+  .badge { display:inline-block; background:var(--green); color:#10210a; font-weight:800; font-size:.8rem; padding:4px 10px; border-radius:999px; margin-top:10px; }
+  .badge.demo { background:var(--gold); color:#3a2500; }
+  main { max-width:980px; margin:0 auto; padding:16px; }
+  section { background:var(--card); border:1px solid #4a331d; border-radius:16px; padding:20px; margin:16px 0; }
+  h2 { margin:0 0 8px; font-size:1.4rem; }
+  .sub { color:var(--muted); margin:0 0 14px; }
+  button { cursor:pointer; border:0; border-radius:999px; font-weight:800; }
+  .rip-btn { display:block; width:100%; padding:18px; font-size:1.4rem; background:var(--gold); color:#3a2500; }
+  .rip-btn:active { transform:scale(.98); }
+  .meter { height:14px; background:#120b05; border-radius:999px; overflow:hidden; margin:14px 0 6px; border:1px solid #4a331d; }
+  .meter > div { height:100%; width:0%; background:linear-gradient(90deg,var(--green),var(--gold),var(--red)); transition:width .3s; }
+  .meter-label { color:var(--muted); font-size:.9rem; text-align:center; }
+  .sound-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .sound-grid button { padding:14px 10px; background:var(--card2); color:var(--cream); border:1px solid #5a4023; font-size:1rem; }
+  .sound-grid button.playing { background:var(--gold); color:#3a2500; }
+  .filters, .tabs { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .filters button, .tabs button { padding:8px 14px; background:#120b05; color:var(--cream); border:1px solid #5a4023; }
+  .filters button.active, .tabs button.active { background:var(--gold); color:#3a2500; }
+  .post { background:var(--card2); border:1px solid #5a4023; border-radius:12px; padding:16px; margin:12px 0; }
+  .post h3 { margin:0 0 4px; }
+  .meta { color:var(--muted); font-size:.9rem; }
+  .tag { display:inline-block; font-size:.75rem; font-weight:800; padding:3px 8px; border-radius:999px; margin-right:6px; }
+  .tag.proud { background:var(--gold); color:#3a2500; }
+  .tag.embarrassing { background:var(--red); color:#fff; }
+  .scores { display:flex; gap:14px; flex-wrap:wrap; margin:10px 0; font-size:.95rem; }
+  .scores b { color:var(--gold); }
+  .react { display:flex; gap:8px; flex-wrap:wrap; }
+  .react button { padding:8px 12px; background:#120b05; color:var(--cream); border:1px solid #5a4023; font-weight:700; }
+  .react button.on { background:var(--green); color:#10210a; }
+  .leader-row, .person { display:flex; justify-content:space-between; gap:12px; padding:10px 4px; border-bottom:1px solid #4a331d; }
+  .leader-row:last-child, .person:last-child { border-bottom:0; }
+  form label { display:block; margin:12px 0 4px; font-weight:700; }
+  form input, form select, form textarea { width:100%; padding:10px; border-radius:10px; border:1px solid #5a4023; background:#120b05; color:var(--cream); font:inherit; }
+  form input[type=range] { padding:0; accent-color:var(--gold); }
+  .submit-btn { width:100%; padding:14px; margin-top:16px; background:var(--green); color:#10210a; font-size:1.1rem; }
+  .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#111; color:#fff; border:1px solid var(--gold); padding:12px 18px; border-radius:999px; display:none; z-index:10; max-width:90vw; text-align:center; }
+  .note { background:#120b05; border:1px dashed #5a4023; border-radius:12px; padding:14px; color:var(--muted); font-size:.95rem; }
+  footer { text-align:center; color:var(--muted); padding:24px 16px 40px; font-size:.9rem; }
+  @media (max-width:600px){ section{padding:16px;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>💨 Fart<span>Space</span></h1>
+  <p>The social network for farts. Show off your proudest rips and your most embarrassing ones. Respect included. No judgement. Well, a little judgement.</p>
+  <div><span class="badge" id="mode-badge">LIVE FEED</span></div>
+</header>
+
+<main>
+  <section aria-label="Let one rip">
+    <h2>Let One Rip</h2>
+    <p class="sub">Press the button. Own it. The Fart-O-Meter is judging you, lovingly.</p>
+    <button class="rip-btn" id="rip-btn" type="button">💨 LET ONE RIP</button>
+    <div class="meter" aria-hidden="true"><div id="meter-fill"></div></div>
+    <div class="meter-label" id="meter-label">Rips today: 0 — the air is suspiciously clean.</div>
+  </section>
+
+  <section aria-label="Sound board">
+    <h2>🎛️ The Sound Board</h2>
+    <p class="sub">Six classics, synthesized live in your browser. No audio files were harmed. Turn your sound on.</p>
+    <div class="sound-grid" id="sound-grid">
+      <button type="button" data-sound="classic">🎺 Classic</button>
+      <button type="button" data-sound="trombone">🎷 Trombone Solo</button>
+      <button type="button" data-sound="squeaker">🐭 Squeaker</button>
+      <button type="button" data-sound="rapid">🔥 Rapid Fire</button>
+      <button type="button" data-sound="silent">🤫 Silent But Deadly</button>
+      <button type="button" data-sound="elevator">🛗 Elevator Special</button>
+    </div>
+  </section>
+
+  <section aria-label="Fart of the day">
+    <h2>👑 Fart of the Day</h2>
+    <p class="sub">One fart to rule them all. Chosen from approved posts.</p>
+    <div id="fart-of-day"><p>Loading the day's champion…</p></div>
+  </section>
+
+  <section aria-label="Feed">
+    <h2>📜 The Feed</h2>
+    <p class="sub">Real posts from real people. Approved by a human moderator before they go live — no spam, no bots, just farts.</p>
+    <div class="filters" id="feed-filters">
+      <button type="button" data-filter="all" class="active">All Farts</button>
+      <button type="button" data-filter="proud">😎 Proud</button>
+      <button type="button" data-filter="embarrassing">😳 Embarrassing</button>
+    </div>
+    <div id="feed"><p>Loading farts…</p></div>
+  </section>
+
+  <section aria-label="Leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <p class="sub">Computed live from approved posts. Bragging rights are permanent. Dignity is optional.</p>
+    <div class="tabs" id="leader-tabs">
+      <button type="button" data-tab="loudness" class="active">🔊 Loudest</button>
+      <button type="button" data-tab="duration">⏱️ Longest</button>
+      <button type="button" data-tab="embarrassment">😳 Most Embarrassing</button>
+    </div>
+    <div id="leaderboard"><p>Loading the hall of fame…</p></div>
+  </section>
+
+  <section aria-label="Top contributors">
+    <h2>🌟 Top Contributors</h2>
+    <p class="sub">Legends of the craft, with their Top 3 farts pinned.</p>
+    <div id="contributors"><p>Loading legends…</p></div>
+  </section>
+
+  <section aria-label="Share your fart">
+    <h2>📝 Share Your Fart</h2>
+    <p class="sub">Tell the world. Your post goes to the moderator first — it will appear in the feed once it's approved. Be honest. Be brave.</p>
+    <form id="share-form">
+      <label for="nickname">Your nickname</label>
+      <input id="nickname" name="nickname" required maxlength="40" placeholder="e.g. Sir Ripsalot">
+      <label for="title">Fart title</label>
+      <input id="title" name="title" required maxlength="80" placeholder="e.g. The Elevator Incident">
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        <option value="proud">😎 Proud — I meant to do that</option>
+        <option value="embarrassing">😳 Embarrassing — I wish the floor would swallow me</option>
+      </select>
+      <label for="story">The story <span style="font-weight:400;color:var(--muted)">(keep it clean-ish, no real names of other people)</span></label>
+      <textarea id="story" name="story" rows="4" required maxlength="600" placeholder="Where were you? What happened? Did anyone hear it?"></textarea>
+      <label for="loudness">Loudness: <span id="loudness-val">7</span>/10</label>
+      <input type="range" id="loudness" min="1" max="10" value="7">
+      <label for="duration">Duration: <span id="duration-val">5</span>/10</label>
+      <input type="range" id="duration" min="1" max="10" value="5">
+      <label for="stink">Stink: <span id="stink-val">6</span>/10</label>
+      <input type="range" id="stink" min="1" max="10" value="6">
+      <label for="embarrassment">Embarrassment: <span id="embarrassment-val">6</span>/10</label>
+      <input type="range" id="embarrassment" min="1" max="10" value="6">
+      <button class="submit-btn" type="submit">💨 Share My Fart (goes to moderation)</button>
+    </form>
+    <p class="note" style="margin-top:14px">No accounts needed to read or react. Posting uses your nickname only — no email, no real name. Posts are reviewed before they go live.</p>
+  </section>
+
+  <section aria-label="About">
+    <h2>About FartSpace</h2>
+    <p class="sub">Everyone farts. Almost nobody admits it in public. FartSpace fixes that. Proud farts get respect. Embarrassing farts get a “We've All Been There.” A shop with fart merch is coming later — for now, just enjoy the feed.</p>
+  </section>
+</main>
+
+<footer>
+  FartSpace — proudly immature since 2026. Please do not fart in the comments. There are no comments. 💨
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

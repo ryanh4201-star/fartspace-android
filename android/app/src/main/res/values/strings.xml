@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FartSpace</string>
+    <string name="title_activity_main">FartSpace</string>
+    <string name="package_name">com.shatteredlayerstudio.fartspace</string>
+    <string name="custom_url_scheme">com.shatteredlayerstudio.fartspace</string>
+</resources>

@@ -1,0 +1,13 @@
+# Netlify config for FartSpace (public version)
+# This folder is a plain static site — no build step.
+# Deploy it by dragging the whole folder onto Netlify Drop,
+# or by connecting this folder as a Netlify site.
+
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"

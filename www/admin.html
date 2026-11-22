@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a120b">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<title>FartSpace Moderator — Approve the Farts</title>
+<style>
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#1a120b; color:#f7e8c9; line-height:1.5; }
+  main { max-width:820px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { margin:0 0 4px; } p { color:#c9a876; }
+  section { background:#2b1d12; border:1px solid #4a331d; border-radius:16px; padding:20px; margin:16px 0; }
+  input, button { font:inherit; }
+  input { width:100%; padding:10px; border-radius:10px; border:1px solid #5a4023; background:#120b05; color:#f7e8c9; margin:8px 0; }
+  button { cursor:pointer; border:0; border-radius:999px; font-weight:800; padding:10px 16px; }
+  .primary { background:#f5b301; color:#3a2500; }
+  .approve { background:#7ec850; color:#10210a; }
+  .reject { background:#e05252; color:#fff; }
+  .delete { background:#120b05; color:#f7e8c9; border:1px solid #5a4023; }
+  .post { background:#3a2817; border:1px solid #5a4023; border-radius:12px; padding:14px; margin:12px 0; }
+  .post h3 { margin:0 0 4px; }
+  .meta { color:#c9a876; font-size:.9rem; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .hidden { display:none; }
+  a { color:#f5b301; }
+</style>
+</head>
+<body>
+<main>
+  <h1>💨 FartSpace Moderator</h1>
+  <p>Owner only. Sign in with the Supabase Auth account you created for yourself. Nobody else can see this page's powers — the database itself enforces that.</p>
+  <p><a href="index.html">← Back to FartSpace</a></p>
+
+  <section id="login-box">
+    <h2>Sign in</h2>
+    <label>Email<br><input id="email" type="email" placeholder="you@example.com" autocomplete="email"></label>
+    <label>Password<br><input id="password" type="password" placeholder="Your moderator password" autocomplete="current-password"></label>
+    <button class="primary" id="login-btn" type="button">Sign in</button>
+    <p id="login-msg"></p>
+    <p>First time? In Supabase go to <b>Authentication → Users → Add user</b>, create an account for yourself with a strong password, then sign in here. Do not share this login.</p>
+  </section>
+
+  <section id="panel" class="hidden">
+    <h2>Moderation queue</h2>
+    <p id="who"></p>
+    <button class="delete" id="logout-btn" type="button">Sign out</button>
+    <h3>⏳ Pending — approve or reject</h3>
+    <div id="pending"><p>Loading…</p></div>
+    <h3>✅ Approved — live on the site</h3>
+    <div id="approved"><p>Loading…</p></div>
+    <h3>🚫 Rejected</h3>
+    <div id="rejected"><p>Loading…</p></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+  var cfg = window.FARTSPACE_CONFIG || {};
+  var configured = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY &&
+    cfg.SUPABASE_URL.indexOf('YOUR-PROJECT') === -1;
+  var msg = document.getElementById('login-msg');
+  if (!configured) {
+    msg.textContent = 'Not configured yet: fill in SUPABASE_URL and SUPABASE_ANON_KEY in config.js (see README.md).';
+    return;
+  }
+  var supabase = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  var loginBox = document.getElementById('login-box');
+  var panel = document.getElementById('panel');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  async function loadAll() {
+    var res = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(200);
+    if (res.error) { document.getElementById('pending').innerHTML = '<p>Could not load posts: ' + esc(res.error.message) + '</p>'; return; }
+    var byStatus = { pending: [], approved: [], rejected: [] };
+    (res.data || []).forEach(function (p) { (byStatus[p.status] || []).push(p); });
+    renderList('pending', byStatus.pending, true);
+    renderList('approved', byStatus.approved, false);
+    renderList('rejected', byStatus.rejected, false);
+  }
+  function renderList(id, list, isPending) {
+    var el = document.getElementById(id);
+    el.innerHTML = list.length ? list.map(function (p) {
+      return '<div class="post"><h3>' + esc(p.title) + '</h3>' +
+        '<div class="meta">' + esc(p.category) + ' · by ' + esc(p.author_nickname) + ' · 🔊' + p.loudness + ' ⏱️' + p.duration + ' 🤢' + p.stink + ' 😳' + p.embarrassment + '</div>' +
+        '<p>' + esc(p.story) + '</p>' +
+        '<div class="actions">' +
+        (isPending ? '<button class="approve" data-act="approved" data-id="' + p.id + '" type="button">✅ Approve</button><button class="reject" data-act="rejected" data-id="' + p.id + '" type="button">🚫 Reject</button>' : '') +
+        '<button class="delete" data-act="delete" data-id="' + p.id + '" type="button">🗑️ Delete</button>' +
+        '</div></div>';
+    }).join('') : '<p>Nothing here. Beautiful silence.</p>';
+    el.querySelectorAll('button[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var act = btn.getAttribute('data-act'), pid = btn.getAttribute('data-id');
+        if (act === 'delete') {
+          if (!confirm('Delete this fart forever?')) return;
+          await supabase.from('reactions').delete().eq('post_id', pid);
+          await supabase.from('posts').delete().eq('id', pid);
+        } else {
+          await supabase.from('posts').update({ status: act }).eq('id', pid);
+        }
+        loadAll();
+      });
+    });
+  }
+  async function showPanel(user) {
+    loginBox.classList.add('hidden');
+    panel.classList.remove('hidden');
+    document.getElementById('who').textContent = 'Signed in as ' + user.email;
+    loadAll();
+  }
+  document.getElementById('login-btn').addEventListener('click', async function () {
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var res = await supabase.auth.signInWithPassword({ email: email, password: password });
+    if (res.error) { msg.textContent = 'Sign-in failed: ' + res.error.message; return; }
+    showPanel(res.data.user);
+  });
+  document.getElementById('logout-btn').addEventListener('click', async function () {
+    await supabase.auth.signOut();
+    panel.classList.add('hidden'); loginBox.classList.remove('hidden');
+  });
+  supabase.auth.getSession().then(function (r) { if (r.data && r.data.session) showPanel(r.data.session.user); });
+})();
+</script>
+</body>
+</html>
