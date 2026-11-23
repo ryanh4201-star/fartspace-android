@@ -1,7 +1,7 @@
 /* FartSpace service worker — caches the app shell only.
    Supabase API calls and the Supabase JS CDN are NOT cached here:
    they always go to the network, so the feed stays live. */
-var CACHE = 'fartspace-v12';
+var CACHE = 'fartspace-v13';
 var SHELL = [
   '/',
  '/index.html', '/admin.html',
